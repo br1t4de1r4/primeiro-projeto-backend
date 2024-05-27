@@ -1,29 +1,94 @@
-const express = require("express")
-const router = express.Router()
+const express = require("express") //inicio do express
+const router = express.Router() // configurando a primeira parte da rota
+const cors = require('cors')
+const conectaBancoDeDados = require('./bancoDeDados.js') //lihgando banco de dados ao arquivo
+conectaBancoDeDados() // chamando a funçao que conecta o banco de dados
 
-const app = express()
-const porta = 3334
+const Mulher = require('./mulherModel')
 
-const mulheres = [
-    {
-        nome: 'Barbara Brito',
-        imagem:'C:\Users\brito\AppData\Local\Temp\f14b253d-a53d-4bcb-8d62-983346ec1b61_Fotos do iCloud.zip.b61\Fotos do iCloud\IMG_8427.JPG',
-        minibio: 'Estudande de analise e desenvolvimento de softwere e amante de techno'
-    },
-    {
-        nome: 'barbara ariola',
-        imagem: 'C:\Users\brito\Downloads\Fotos do iCloud(1)\Fotos do iCloud\IMG_8460.JPG', 
-        minibio: 'astrologue e namorada'
+const app = express() //iniciando o app
+app.use(express.json())
+app.use(cors())
+
+const porta = 3334 //criando a porta
+
+//GET
+async function mostraMulheres(request, response) {
+    try{
+        const mulheresVindasDoBancoDeDados = await Mulher.find()
+
+        response.json(mulheresVindasDoBancoDeDados)
+    }catch (erro) {
+        console.log(erro)
     }
-]
-
-function mostraMulheres(request, response) {
-    response.json(mulheres)
 }
 
+//POST
+async function criaMulher(request, response){
+    const novaMulher = new Mulher({
+        nome: request.body.nome,
+        imagem:request.body.imagem,
+        minibio: request.body.minibio,
+        citacao: request.body.citacao
+    })
+
+    try{
+        const mulherCriada = await novaMulher.save()
+        response.status(201).json(mulherCriada)
+    }catch (erro){
+    console.log(erro)
+}
+
+}
+
+//PATCH
+async function corrigeMulher(request, response){
+    try{
+        const mulherEncontrada = await Mulher.findById(request.params.id)
+        if (request.body.nome){
+            mulherEncontrada.nome = request.body.nome
+        }
+    
+        if (request.body.imagem){
+            mulherEncontrada.imagem = request.body.imagem
+        }
+    
+        if (request.body.minibio){
+            mulherEncontrada.minibio = request.body.minibio
+        }
+
+        if (request.body.citacao){
+            mulherEncontrada.citacao = request.body.citacao
+        }
+
+        const mulherAtualizadaNoBancoDeDados = await mulherEncontrada.save()
+        response.json()
+
+    }catch (erro){
+    console.log(erro)
+    }
+
+}
+
+//DELETE
+async function deletaMulher(request, response){
+    try{
+        await Mulher.findByIdAndDelete(request.params.id)
+        response.jsom({ mensagem: 'Mulher deletada com sucesso!'})
+
+    }catch(erro){
+        console.log(erro)
+    }
+    
+}
+
+app.use(router.get('/mulheres', mostraMulheres)) //configurando rota GET /mulheres
+app.use(router.post('/mulheres', criaMulher)) // configurei rota post /mulheres
+app.use(router.patch('/mulheres/:id', corrigeMulher)) // configurei a rota PACTH /mulheres 
+app.use(router.delete('/mulheres/:id', deletaMulher)) // configurei rota DELETE /mulheres
+
+//PORTA
 function mostraPorta() {
     console.log("Servidor criado e rodando na porta ", porta)
 }
-
-app.use(router.get('/mulheres', mostraMulheres))
-app.listen(porta, mostraPorta)
+app.listen(porta, mostraPorta) //ouvindo a porta
